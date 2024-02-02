@@ -120,7 +120,7 @@ function createTable() {
             echo "Error: The number of columns cannot be negative."
             return
         fi
-
+        
         if [[ "$num_column" -eq 0 ]]; then
             echo "Error: The table must have at least one column."
             return
@@ -472,16 +472,18 @@ function UpdateTable() {
 
 #            sed -i "${recordID}s/^[^|]*/$valuesString/; ${recordID}s/[^|]*|/$valuesString|/" "$curTable/data"
 
-            # Check uniqueness of the new primary key value
-            newPrimaryKey=${values[0]}
-            if [ "$oldPrimaryKey" != "$newPrimaryKey" ] && grep -qw "$newPrimaryKey" "$curTable/data"; then
-                echo "Error: Value in column '${columns[0]}' must be unique. The updated value is already taken."
-                # Revert the update
-                sed -i "${recordID}s/.*/$oldPrimaryKey|${values[*]:1}/" "$curTable/data"
-                return
-            fi
+           # Perform the update
+sed -i "${recordID}s/.*/$valuesString/" "$curTable/data"
 
-            echo "Record $recordID updated successfully in table '$nameTable'."
+# Check if the update caused a uniqueness conflict
+if [ "$oldPrimaryKey" != "${values[0]}" ] && grep -qw "${values[0]}" <(awk -F'|' '{print $1}' "$curTable/data" | sed "${recordID}d"); then
+    echo "Warning: Value in column '${columns[0]}' must be unique. The updated value is already taken."
+    # Revert the update
+    sed -i "${recordID}s/.*/$oldPrimaryKey|${values[*]:1}/" "$curTable/data"
+else
+    echo "Record $recordID updated successfully in table '$nameTable'."
+fi
+
         else
             echo "Record $recordID not found in table '$nameTable'."
         fi
